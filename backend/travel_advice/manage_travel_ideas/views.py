@@ -5,6 +5,7 @@ from .models import Idea
 from .serializers import IdeaSerializer
 from rest_framework import serializers
 from rest_framework import status
+from django.db.models import Q
 
 # Create your views here.
 
@@ -36,6 +37,7 @@ def created_ideas(request):
 
     {
         "title": "UPDATED",
+        "author_token": "superuser",
         "destination": "GUANGZHOU",
         "description": "This is an idea",
         "tags": [
@@ -72,7 +74,11 @@ def view_ideas(request):
     # checking for the parameters from the URL
     
     if request.query_params:
-        ideas = Idea.objects.filter(**request.query_params.dict())
+        params_dict = request.query_params.dict() # dictionary that contains query params, e.g. {id: 4, author_token: "superuser"}
+        if "keyword" in params_dict:
+            ideas = Idea.objects.filter(Q(destination__icontains=params_dict["keyword"])|Q(tags__name__in=[params_dict["keyword"]])).distinct()
+        else:
+            ideas = Idea.objects.filter(**request.query_params.dict())
     else:
         ideas = Idea.objects.all()
   
@@ -90,7 +96,7 @@ def update_ideas(request, pk):
     UPDATE an idea
     api: update/pk
     method: POST
-    Example: same as CREATE, id cannot be updated
+    Example: same as CREATE, id and userToken cannot be updated
     """
     idea = Idea.objects.get(pk=pk)
     data = IdeaSerializer(instance=idea, data=request.data)
